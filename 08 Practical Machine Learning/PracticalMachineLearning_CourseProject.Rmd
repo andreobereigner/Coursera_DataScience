@@ -1,0 +1,195 @@
+---
+title: "Practical Machine Learning - Course Project"
+author: "Andre Obereigner"
+date: "Sunday, 13 September, 2015"
+output:
+  html_document:
+    keep_md: yes
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+
+```{r setoptions, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+
+options(scipen = 1, digits=4)
+Sys.setlocale("LC_TIME", "English")
+
+library(ggplot2)
+library(xtable)
+library(caret)
+library(randomForest)
+
+setwd("~/_DATA/Career/_C_DataScienceCertification/08_MachineLearning/CourseProject")
+
+```
+#Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+#Data Loading and Reading
+First of all, let's load the data. 
+
+```{r echo=TRUE}
+trainUrl <-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-trainRaw.csv"
+testUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+trainFile <- "./pml-training.csv"
+testFile  <- "./pml-testing.csv"
+
+if (!file.exists(trainFile)) {
+  download.file(trainUrl, destfile=trainFile, method="curl")
+}
+
+if (!file.exists(testFile)) {
+  download.file(testUrl, destfile=testFile, method="curl")
+}
+```
+
+Next, let's read the data.
+
+```{r echo=TRUE}
+trainRaw <- read.csv(trainFile)
+testRaw <- read.csv(testFile)
+
+dim(trainRaw)
+dim(testRaw)
+
+class(trainRaw$classe)
+table(trainRaw$classe)
+```
+
+Both data sets contain `r dim(trainRaw)[2]` features whereas the train set includes `r dim(trainRaw)[1]` observations and the test set contains `r dim(testRaw)[1]` observations.
+
+
+#Data Cleaning
+out of curiosity, let's have a look at how many complete observations there are. Not surprisingly, the large majority of observations has missing values.
+
+```{r echo=TRUE}
+sum(complete.cases(trainRaw))
+sum(complete.cases(testRaw))
+```
+
+Next, let's remove near zero variance features.
+
+```{r echo=TRUE}
+nsv <- nearZeroVar(trainRaw, saveMetrics = TRUE)
+trainRaw <- trainRaw[, !nsv$nzv]
+```
+
+Similarly, let's identify columns which have lots of missing values. It turns out that there are 41 features with 19216 missing values, representing `r 19216/nrow(trainRaw)`.
+
+```{r echo=TRUE}
+table(colSums(is.na(trainRaw)))
+
+colNA09 <- colSums(is.na(trainRaw)) > 0.9*nrow(trainRaw)
+trainRaw <- trainRaw[, !colNA09]
+```
+
+In the last step, let's remove the features which are irrelevant for the analysis at hand.
+
+```{r echo=TRUE}
+colnames(trainRaw[grepl("^X|window|timestamp", names(trainRaw))])
+
+colIRR <- grepl("^X|window|timestamp", names(trainRaw))
+trainRaw <- trainRaw[, !colIRR]
+```
+
+#Slicing the Data
+In the next step, let's split the date into a training and validation data set.
+
+```{r echo=TRUE}
+set.seed(101)
+
+inTrain <- createDataPartition(trainRaw$classe, p=0.70, list=F)
+trainingData <- trainRaw[inTrain, ]
+validationData <- trainRaw[-inTrain, ]
+```
+
+#Model Building
+In the following section, I outline the model building setup as well as the model results.
+
+##Random Forest Model
+
+```{r echo=TRUE}
+model01 <- train(classe ~ ., 
+                 method = "rf", 
+                 data = trainingData, 
+                 importance = TRUE, 
+                 trControl = trainControl(method = "cv", number = 10))
+
+model01
+#plot(model01, ylim = c(0.9, 1))
+
+model01.predict <- predict(model01, validationData)
+confusionMatrix(model01.predict, validationData$classe)
+```
+
+When training a Random Forst model on the training data set and applying it to the validation data set, we get an **overall agreement (accuracy) of `r confusionMatrix(model01.predict, validationData$classe)$overall[1]`**. 
+
+##Generalized Boosted Regression Model
+
+```{r echo=TRUE}
+model02 <- train(classe ~ ., 
+                 method = "gbm", 
+                 data = trainingData, 
+                 verbose = FALSE, 
+                 trControl = trainControl(method = "cv", number = 10))
+
+model02
+#plot(model02, ylim = c(0.9, 1))
+
+model02.predict <- predict(model02, validationData)
+confusionMatrix(model02.predict, validationData$classe)
+```
+
+When training a Generalized Boosted Regression model on the training data set and applying it to the validation data set, we get an **overall agreement (accuracy) of `r confusionMatrix(model02.predict, validationData$classe)$overall[1]`**. 
+
+Judging from the performance of the models on the validation data set, the Random Forest performs exhibits the best performance.
+
+##Model Comparison and Conclusion
+```{r echo=TRUE}
+# Doing Between-Model Comparisons
+#########################################
+crossValidation.values <- resamples(list(RF = model01,
+                                         GBM = model02))
+summary(crossValidation.values)
+
+bwplot(crossValidation.values, metric = "Accuracy")
+```
+
+When taking a close look at the cross-validation of the two models with 10 resamples, we come to the same conclusion. The **Random Forest model performs best with a mean and median accuracy of 0.992 and 0.991, respectively**, compared to 0.96 for both statistics of the Generalized Boosted Regression model.
+
+In addition, the above graph confirms the conclusion visually and also highlights that the **Random Forst model has a narrower range of accuracy** than the Generalized Boosted Regression model on the 10 resamples.
+
+```{r echo=TRUE}
+#True accuracy of the winning model01.
+model01.accuracy <- postResample(model01.predict, validationData$classe)[1]
+model01.ooSampleError <- 1 - model01.accuracy
+model01.ooSampleError
+```
+
+With an accuracy of **model01** on the validation data set of `r round(model01.accuracy, 2)`, **the out of sample error is `r model01.ooSampleError` or `r round(model01.ooSampleError * 100, 2)`%**.
+
+
+#Prediction of Test Data
+In the last section, I will generate the predictions for the test data set, provide a brief summary of predictions and prepare the files for the submission of the predictions.
+
+```{r echo=TRUE}
+model01.testpredict <- predict(model01, testRaw)
+
+answers <- as.character(model01.testpredict)
+table(answers)
+
+#Code for the creation of submission files as provided by Coursera.
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+pml_write_files(answers)
+```
+
+
+
+
