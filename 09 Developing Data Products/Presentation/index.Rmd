@@ -1,0 +1,92 @@
+---
+title       : The MPG Calculator
+subtitle    : Developing Data Products
+author      : Andre Obereigner
+job         : MSc in Predictive Analytics
+framework   : io2012          # {io2012, html5slides, shower, dzslides, ...}
+highlighter : highlight.js    # {highlight.js, prettify, highlight}
+hitheme     : solarized_light # 
+widgets     : []              # {mathjax, quiz, bootstrap}
+mode        : standalone      # {standalone, draft}
+knit        : slidify::knit2slides
+
+---.segue .quote .dark
+
+<q>Simply predict a vehicle's MPG performance by its type of transmission, weight and horsepower.</q>
+
+<style>
+.dark q {
+  color: white;
+}
+</style>
+
+---
+
+## The Final Model
+The <b>final GLM model</b> was trained with <i>caret</i> and takes into consideration three variables:
+
+1. <b>horsepower</b> (hp),
+2. <b>weight</b> (wt) and
+3. the vehicle's <b>transmission</b> (am)
+
+```{r echo=TRUE, eval=FALSE}
+finalModel <- train(mpg ~ hp + wt + am,
+                 data = mtcarsAdj,
+                 method = "glm",
+                 metric = "RMSE")
+```
+<br />
+<small>The Motor Trend Car Road Tests (mtcars) data was extracted from the 1974 Motor Trend US magazine, and comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973 and 1974 models). The data consists of 32 observations and 11 variables.</small>
+
+---
+
+## The Default MPG Performance
+
+Once you open the [MPG Calculator](http://bit.ly/1NPW67Z) application, you will see the <b>default MPG performance</b>. You can then adjust the parameters and <b>observe how the performance changes</b>.
+
+```{r echo=FALSE, eval=FALSE}
+set.seed(100)
+
+data(mtcars)
+
+mtcarsOriginal <- mtcars
+mtcarsAdj <- mtcars
+
+mtcarsAdj$cyl <- as.factor(mtcarsOriginal$cyl)
+mtcarsAdj$vs <- as.factor(mtcarsOriginal$vs)
+mtcarsAdj$am <- factor(mtcarsOriginal$am)
+mtcarsAdj$gear <- factor(mtcarsOriginal$gear)
+mtcarsAdj$carb <- factor(mtcarsOriginal$carb)
+
+finalModel <- train(mpg ~ hp + wt + am,
+                 data = mtcarsAdj,
+                 method = "glm",
+                 metric = "RMSE")
+
+```
+
+```{r echo=TRUE, eval=TRUE}
+predictedMPG <- predict(finalModel, data.frame(hp = 120,
+                                               wt = 3300 / 1000, 
+                                               am = as.factor(1)))
+
+paste(round(predictedMPG, 2), "Miles per Gallon")
+```
+<br />
+Enjoy!
+
+---
+
+## Want to Learn More?
+This is a short project by Andre Obereigner for the Developing Data Products course offered by Coursera and the Johns Hopkins Bloomberg School of Public Health.
+
+If you wish to learn more, please go to:
+
+* Shiny application: [https://aobereigner.shinyapps.io/MPGCalculator](http://bit.ly/1NPW67Z), 
+* Presentation: [link title](),
+* Github: [09 Developing Data Products](http://bit.ly/1KjIXfL), or
+* Enroll in Coursera's [Data Science Specialization](http://bit.ly/1Pth0dp)
+
+
+
+

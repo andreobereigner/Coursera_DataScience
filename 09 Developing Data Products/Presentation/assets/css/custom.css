@@ -1,0 +1,12 @@
+.title-slide {
+  background-color: #FFFFFF; /* #EDE0CF; #CBE7A5; #CA9F9D*/
+}
+
+.title-slide hgroup > h1{
+ font-family: 'Oswald', 'Helvetica', sanserif; 
+}
+
+.title-slide hgroup > h1, 
+.title-slide hgroup > h2 {
+  color: #EF5150 ;  /* ; #EF5150*/
+}
