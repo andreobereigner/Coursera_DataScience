@@ -70,7 +70,7 @@ This is a short project by Andre Obereigner for the Developing Data Products cou
 If you wish to learn more, please go to:
 
 * Shiny application: [https://aobereigner.shinyapps.io/MPGCalculator](http://bit.ly/1NPW67Z), 
-* Presentation: [link title](),
+* Presentation: [The MPG Calculator](http://bit.ly/1ZQOeXI),
 * Github: [09 Developing Data Products](http://bit.ly/1KjIXfL), or
 * Enroll in Coursera's [Data Science Specialization](http://bit.ly/1Pth0dp)
 
